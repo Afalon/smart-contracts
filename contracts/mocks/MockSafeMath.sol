@@ -1,7 +1,7 @@
 pragma solidity ^0.4.23;
 
 
-import "../Atonomi.sol";
+import "../Legacy/Atonomi.sol";
 
 contract SafeMathMock {
     using SafeMath for uint256;

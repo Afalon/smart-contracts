@@ -74,7 +74,7 @@ interface SettingsInterface {
 /// @dev Ownable: Owner governs the access of Atonomi Admins, Fees, and Rewards on the network
 /// @dev Pausable: Gives ability for Owner to pull emergency stop to prevent actions on the network
 /// @dev TokenDestructible: Gives owner ability to kill the contract and extract funds to a new contract
-contract Atonomi is Pausable, TokenDestructible {
+contract AtonomiLegacy is Pausable, TokenDestructible {
     using SafeMath for uint256;
 
     /// @title ATMI Token
