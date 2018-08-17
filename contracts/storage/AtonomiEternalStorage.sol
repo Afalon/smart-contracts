@@ -20,9 +20,9 @@ contract AtonomiEternalStorage is Ownable {
 
     /*** Modifiers ************/
 
-    /// @notice only IRNAdmins or Owner can call, otherwise throw
+    /// @notice only IRNNodes can call, otherwise throw
     modifier onlyAtonomiMember() {
-        //TODO
+        require(this.getBool(keccak256("network", msg.sender, "isIRNNode")), "not a network member");
         _;
     }
 
