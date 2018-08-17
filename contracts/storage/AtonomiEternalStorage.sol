@@ -19,22 +19,10 @@ contract AtonomiEternalStorage is Ownable {
 
 
     /*** Modifiers ************/
-    
+
+    /// @notice only IRNAdmins or Owner can call, otherwise throw
     modifier onlyAtonomiMember() {
-        /// TODO: Only allow authorized network members to write
-        _;
-    }
-
-
-    /// @dev Only allow access from the latest version of a contract in the Rocket Pool network after deployment
-    modifier onlyLatestRocketNetworkContract() {
-        // The owner is only allowed to set the storage upon deployment to register the initial contracts, afterwards their direct access is disabled
-        if (msg.sender == owner) {
-            require(boolStorage[keccak256("contract.storage.initialised")] == false);
-        } else {
-            // Make sure the access is permitted to only contracts in our Dapp
-            require(addressStorage[keccak256("contract.address", msg.sender)] != 0x0);
-        }
+        //TODO
         _;
     }
 
@@ -117,37 +105,37 @@ contract AtonomiEternalStorage is Ownable {
     /**** Delete Methods ***********/
     
     /// @param _key The key for the record
-    function deleteAddress(bytes32 _key) onlyLatestRocketNetworkContract external {
+    function deleteAddress(bytes32 _key) onlyAtonomiMember external {
         delete addressStorage[_key];
     }
 
     /// @param _key The key for the record
-    function deleteUint(bytes32 _key) onlyLatestRocketNetworkContract external {
+    function deleteUint(bytes32 _key) onlyAtonomiMember external {
         delete uIntStorage[_key];
     }
 
     /// @param _key The key for the record
-    function deleteString(bytes32 _key) onlyLatestRocketNetworkContract external {
+    function deleteString(bytes32 _key) onlyAtonomiMember external {
         delete stringStorage[_key];
     }
 
     /// @param _key The key for the record
-    function deleteBytes(bytes32 _key) onlyLatestRocketNetworkContract external {
+    function deleteBytes(bytes32 _key) onlyAtonomiMember external {
         delete bytesStorage[_key];
     }
 
     /// @param _key The key for the record
-    function deleteBytes32(bytes32 _key) onlyLatestRocketNetworkContract external {
+    function deleteBytes32(bytes32 _key) onlyAtonomiMember external {
         delete bytes32Storage[_key];
     }
     
     /// @param _key The key for the record
-    function deleteBool(bytes32 _key) onlyLatestRocketNetworkContract external {
+    function deleteBool(bytes32 _key) onlyAtonomiMember external {
         delete boolStorage[_key];
     }
     
     /// @param _key The key for the record
-    function deleteInt(bytes32 _key) onlyLatestRocketNetworkContract external {
+    function deleteInt(bytes32 _key) onlyAtonomiMember external {
         delete intStorage[_key];
     }
 }

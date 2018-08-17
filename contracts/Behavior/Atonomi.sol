@@ -258,7 +258,9 @@ contract Atonomi is Pausable, TokenDestructible {
         public onlyManufacturer whenNotPaused returns (bool)
     {
         uint256 registrationFee = settings.registrationFee();
-        Device memory d = _registerDevice(msg.sender, _deviceIdHash, _deviceType, _devicePublicKey);
+        
+        _registerDevice(msg.sender, _deviceIdHash, _deviceType, _devicePublicKey);
+
         emit DeviceRegistered(
             msg.sender,
             registrationFee,
@@ -279,9 +281,20 @@ contract Atonomi is Pausable, TokenDestructible {
     /// @dev owner has ability to pause this operation
     function activateDevice(bytes32 _deviceId) public whenNotPaused returns (bool) {
         uint256 activationFee = settings.activationFee();
-        Device memory d = _activateDevice(_deviceId);
-        emit DeviceActivated(msg.sender, activationFee, _deviceId, d.manufacturerId, d.deviceType);
-        address manufacturer = atonomiStorage.getAddress(keccak256("manufacturerRewards",d.manufacturerId));
+        
+        _activateDevice(_deviceId);
+
+        bytes32 manufacturerId = atonomiStorage.getBytes32(keccak256("devices", _deviceId, "manufacturerId"));
+        bytes32 deviceType = atonomiStorage.getBytes32(keccak256("devices", _deviceId, "deviceType"));
+
+        emit DeviceActivated(
+            msg.sender, 
+            activationFee, 
+            _deviceId, 
+            manufacturerId, 
+            deviceType);
+
+        address manufacturer = atonomiStorage.getAddress(keccak256("manufacturerRewards", manufacturerId));
         require(manufacturer != address(this), "manufacturer is unknown");
         _depositTokens(manufacturer, activationFee);
         require(token.transferFrom(msg.sender, address(this), activationFee), "transferFrom failed");
@@ -306,11 +319,14 @@ contract Atonomi is Pausable, TokenDestructible {
         uint256 activationFee = settings.activationFee();
 
         bytes32 deviceIdHash = keccak256(_deviceId);
-        Device memory d = _registerDevice(msg.sender, deviceIdHash, _deviceType, _devicePublicKey);
-        bytes32 manufacturerId = d.manufacturerId;
+
+        _registerDevice(msg.sender, deviceIdHash, _deviceType, _devicePublicKey);
+
+        bytes32 manufacturerId = atonomiStorage.getBytes32(keccak256("devices", deviceIdHash, "manufacturerId"));
         emit DeviceRegistered(msg.sender, registrationFee, deviceIdHash, manufacturerId, _deviceType);
 
-        d = _activateDevice(_deviceId);
+        _activateDevice(_deviceId);
+
         emit DeviceActivated(msg.sender, activationFee, _deviceId, manufacturerId, _deviceType);
 
         uint256 fee = registrationFee.add(activationFee);
@@ -335,9 +351,12 @@ contract Atonomi is Pausable, TokenDestructible {
         bytes32 _reputationScore)
         public onlyIRNNode whenNotPaused returns (bool)
     {
-        Device memory d = _updateReputationScore(_deviceId, _reputationScore);
+        _updateReputationScore(_deviceId, _reputationScore);
 
-        address _manufacturerWallet = atonomiStorage.getAddress(keccak256("manufacturerRewards",d.manufacturerId));
+        bytes32 manufacturerId = atonomiStorage.getBytes32(keccak256("devices", _deviceId, "manufacturerId"));
+        bytes32 deviceType = atonomiStorage.getBytes32(keccak256("devices", _deviceId, "deviceType"));
+
+        address _manufacturerWallet = atonomiStorage.getAddress(keccak256("manufacturerRewards", manufacturerId));
         require(_manufacturerWallet != address(0), "_manufacturerWallet cannot be 0x0");
         require(_manufacturerWallet != msg.sender, "manufacturers cannot collect the full reward");
 
@@ -348,7 +367,7 @@ contract Atonomi is Pausable, TokenDestructible {
         _distributeRewards(_manufacturerWallet, _manufacturerWallet, manufacturerReward);
         emit ReputationScoreUpdated(
             _deviceId,
-            d.deviceType,
+            deviceType,
             _reputationScore,
             msg.sender,
             irnReward,
@@ -426,8 +445,11 @@ contract Atonomi is Pausable, TokenDestructible {
             bytes32 deviceIdHash = _deviceIdHashes[i];
             bytes32 deviceType = _deviceTypes[i];
             bytes32 devicePublicKey = _devicePublicKeys[i];
-            Device memory d = _registerDevice(msg.sender, deviceIdHash, deviceType, devicePublicKey);
-            emit DeviceRegistered(msg.sender, registrationFee, deviceIdHash, d.manufacturerId, deviceType);
+            
+            _registerDevice(msg.sender, deviceIdHash, deviceType, devicePublicKey);
+
+            bytes32 manufacturerId = atonomiStorage.getBytes32(keccak256("devices", deviceIdHash, "manufacturerId"));
+            emit DeviceRegistered(msg.sender, registrationFee, deviceIdHash, manufacturerId, deviceType);
 
             runningBalance = runningBalance.add(registrationFee);
         }
@@ -657,7 +679,7 @@ contract Atonomi is Pausable, TokenDestructible {
         address _manufacturer,
         bytes32 _deviceIdHash,
         bytes32 _deviceType,
-        bytes32 _devicePublicKey) internal returns (Device) {
+        bytes32 _devicePublicKey) internal {
         require(_manufacturer != address(0), "manufacturer is required");
         require(_deviceIdHash != 0, "device id hash is required");
         require(_deviceType != 0, "device type is required");
@@ -681,19 +703,19 @@ contract Atonomi is Pausable, TokenDestructible {
 
     /// @dev ensure a device is validated for activation
     /// @dev updates device registry
-    function _activateDevice(bytes32 _deviceId) internal returns (Device) {
+    function _activateDevice(bytes32 _deviceId) internal {
         bytes32 deviceIdHash = keccak256(_deviceId);
         
-        require(atonomiStorage.getBool(keccak256("devices", _deviceId, "registered")), "not registered");
-        require(!atonomiStorage.getBool(keccak256("devices", _deviceId, "activated")), "already activated");
-        require(atonomiStorage.getUint(keccak256("devices", _deviceId, "manufacturerId")) != 0, "no manufacturer id was found");
+        require(atonomiStorage.getBool(keccak256("devices", deviceIdHash, "registered")), "not registered");
+        require(!atonomiStorage.getBool(keccak256("devices", deviceIdHash, "activated")), "already activated");
+        require(atonomiStorage.getUint(keccak256("devices", deviceIdHash, "manufacturerId")) != 0, "no manufacturer id was found");
 
         atonomiStorage.setBool(keccak256("devices", _deviceId, "activated"), true);
     }
 
     /// @dev ensure a device is validated for a new reputation score
     /// @dev updates device registry
-    function _updateReputationScore(bytes32 _deviceId, bytes32 _reputationScore) internal returns (Device) {
+    function _updateReputationScore(bytes32 _deviceId, bytes32 _reputationScore) internal{
         require(_deviceId != 0, "device id is empty");
 
         require(atonomiStorage.getBool(keccak256("devices", _deviceId, "registered")), "not registered");
