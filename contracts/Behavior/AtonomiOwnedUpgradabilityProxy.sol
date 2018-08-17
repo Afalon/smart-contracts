@@ -1,13 +1,13 @@
 pragma solidity ^0.4.23; // solhint-disable-line
 
-import "./NetworkUpgradabilityProxy.sol";
+import "./AtonomiUpgradabilityProxy.sol";
 import "../Storage/AtonomiEternalStorage.sol";
 
 /**
  * @title OwnedUpgradeabilityProxy
  * @dev This contract combines an upgradeability proxy with basic authorization control functionalities
  */
-contract NetworkOwnedUpgradabilityProxy is NetworkUpgradabilityProxy, AtonomiEternalStorage {
+contract AtonomiOwnedUpgradabilityProxy is AtonomiUpgradabilityProxy, AtonomiEternalStorage {
   /**
   * @dev Event to show ownership has been transferred
   * @param previousOwner representing the address of the previous owner

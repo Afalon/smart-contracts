@@ -6,7 +6,7 @@ import "../proxy/Proxy.sol";
  * @title UpgradeabilityProxy
  * @dev This contract represents a proxy where the implementation address to which it will delegate can be upgraded
  */
-contract NetworkUpgradabilityProxy is Proxy {
+contract AtonomiUpgradabilityProxy is Proxy {
     /**
      * @dev This event will be emitted every time the implementation gets upgraded
      * @param implementation representing the address of the upgraded implementation
@@ -14,7 +14,7 @@ contract NetworkUpgradabilityProxy is Proxy {
     event Upgraded(address indexed implementation);
     
     // Storage position of the address of the current implementation
-    bytes32 private constant implementationPosition = keccak256("atonomi.io.network");
+    bytes32 private constant implementationPosition = keccak256("atonomi.io.behavior");
     
     /**
      * @dev Constructor function

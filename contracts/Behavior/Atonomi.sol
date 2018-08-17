@@ -89,49 +89,6 @@ contract Atonomi is Pausable, TokenDestructible {
     /// @title Atonomi Storage
     AtonomiEternalStorage private atonomiStorage;
 
-
-    ///
-    /// TYPES 
-    ///
-    /// @title Atonomi Device
-    /// @notice Contains the device state on the Atonomi network
-    /// @dev manufacturerId is the manufacturer the device belongs to
-    /// @dev deviceType is the type of device categorized by the manufacturer
-    /// @dev registered is true when device is registered, otherwise false
-    /// @dev activated is true when device is activated, otherwise false
-    /// @dev reputationScore is official Atonomi Reputation score for the device
-    /// @dev devicePublicKey is public key used by IRN Nodes for validation
-    struct Device {
-        bytes32 manufacturerId;
-        bytes32 deviceType;
-        bool registered;
-        bool activated;
-        bytes32 reputationScore;
-        bytes32 devicePublicKey;
-    }
-
-    /// @title Token Pool
-    /// @notice Contains balance and reputation reward amounts for each token pool
-    /// @dev balance is total amount of tokens available in the pool
-    /// @dev rewardAmount is the total amount distributed between the manufacturer and reputation author
-    struct TokenPool {
-        uint256 balance;
-        uint256 rewardAmount;
-    }
-
-    /// @title Atonomi Network Participant
-    /// @notice Contains role information for a participant
-    /// @dev isIRNAdmin is true if participant is an IRN Admin, otherwise false
-    /// @dev isManufacturer is true if participant is a Manufacturer, otherwise false
-    /// @dev isIRNNode is true if participant is an IRN Node, otherwise false
-    /// @dev memberId is the manufacturer id, for all other participants this will be 0
-    struct NetworkMember {
-        bool isIRNAdmin;
-        bool isManufacturer;
-        bool isIRNNode;
-        bytes32 memberId;
-    }
-
     ///
     /// MODIFIERS
     ///
