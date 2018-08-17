@@ -1,31 +1,11 @@
 pragma solidity ^0.4.23; // solhint-disable-line
 
 import "zeppelin-solidity/contracts/ownership/Ownable.sol";
-
+import "../Storage/AtonomiEternalStorage.sol";
 
 /// @title Atonomi Network Settings
 /// @notice This contract controls all owner configurable variables in the network
 contract NetworkSettings is Ownable {
-    /// @title Registration Fee
-    /// @notice Manufacturer pays token to register a device
-    /// @notice Manufacturer will recieve a share in any reputation updates for a device
-    uint256 public registrationFee;
-
-    /// @title Activiation Fee
-    /// @notice Manufacturer or Device Owner pays token to activate device
-    uint256 public activationFee;
-
-    /// @title Default Reputation Reward
-    /// @notice The default reputation reward set for new manufacturers
-    uint256 public defaultReputationReward;
-
-    /// @title Reputation Share for IRN Nodes
-    /// @notice percentage that the irn node or auditor receives (remaining goes to manufacturer)
-    uint256 public reputationIRNNodeShare;
-
-    /// @title Block threshold
-    /// @notice the number of blocks that need to pass between reputation updates to gain the full reward
-    uint256 public blockThreshold;
 
     /// @notice emitted everytime the registration fee changes
     /// @param _sender ethereum account of participant that made the change
@@ -67,6 +47,9 @@ contract NetworkSettings is Ownable {
         uint256 _newBlockThreshold
     );
 
+    /// @title Atonomi Storage
+    AtonomiEternalStorage private atonomiStorage;
+
     /// @notice Constructor for Atonomi Reputation contract
     /// @param _registrationFee initial registration fee on the network
     /// @param _activationFee initial activation fee on the network
@@ -74,6 +57,7 @@ contract NetworkSettings is Ownable {
     /// @param _reputationIRNNodeShare share that the reputation author recieves (remaining goes to manufacturer)
     /// @param _blockThreshold the number of blocks that need to pass to receive the full reward
     constructor(
+        address _storage,
         uint256 _registrationFee,
         uint256 _activationFee,
         uint256 _defaultReputationReward,
@@ -85,11 +69,28 @@ contract NetworkSettings is Ownable {
         require(_reputationIRNNodeShare > 0, "new share must be larger than zero");
         require(_reputationIRNNodeShare < 100, "new share must be less than 100");
 
-        activationFee = _activationFee;
-        registrationFee = _registrationFee;
-        defaultReputationReward = _defaultReputationReward;
-        reputationIRNNodeShare = _reputationIRNNodeShare;
-        blockThreshold = _blockThreshold;
+        atonomiStorage = AtonomiEternalStorage(_storage);
+
+        // Registration Fee
+        // Manufacturer pays token to register a device
+        // Manufacturer will recieve a share in any reputation updates for a device
+        atonomiStorage.setUint(keccak256("activationFee"), _activationFee);
+
+        // Activiation Fee
+        // Manufacturer or Device Owner pays token to activate device
+        atonomiStorage.setUint(keccak256("registrationFee"), _registrationFee);
+
+        // Default Reputation Reward
+        // The default reputation reward set for new manufacturers
+        atonomiStorage.setUint(keccak256("defaultReputationReward"), _defaultReputationReward);
+
+        // Reputation Share for IRN Nodes
+        // Percentage that the irn node or auditor receives (remaining goes to manufacturer)
+        atonomiStorage.setUint(keccak256("reputationIRNNodeShare"), _reputationIRNNodeShare);
+
+        // Block threshold
+        // The number of blocks that need to pass between reputation updates to gain the full reward
+        atonomiStorage.setUint(keccak256("blockThreshold"), _blockThreshold);
     }
 
     /// @notice sets the global registration fee
@@ -97,8 +98,10 @@ contract NetworkSettings is Ownable {
     /// @return true if successful, otherwise false
     function setRegistrationFee(uint256 _registrationFee) public onlyOwner returns (bool) {
         require(_registrationFee > 0, "new registration fee must be greater than zero");
-        require(_registrationFee != registrationFee, "new registration fee must be different");
-        registrationFee = _registrationFee;
+        require(_registrationFee != atonomiStorage.getUint(keccak256("registrationFee")), "new registration fee must be different");
+        
+        atonomiStorage.setUint(keccak256("registrationFee"), _registrationFee);
+
         emit RegistrationFeeUpdated(msg.sender, _registrationFee);
         return true;
     }
@@ -108,8 +111,10 @@ contract NetworkSettings is Ownable {
     /// @return true if successful, otherwise false
     function setActivationFee(uint256 _activationFee) public onlyOwner returns (bool) {
         require(_activationFee > 0, "new activation fee must be greater than zero");
-        require(_activationFee != activationFee, "new activation fee must be different");
-        activationFee = _activationFee;
+        require(_activationFee !=  atonomiStorage.getUint(keccak256("activationFee")), "new activation fee must be different");
+
+        atonomiStorage.setUint(keccak256("activationFee"), _activationFee);
+
         emit ActivationFeeUpdated(msg.sender, _activationFee);
         return true;
     }
@@ -119,8 +124,10 @@ contract NetworkSettings is Ownable {
     /// @return true if successful, otherwise false
     function setDefaultReputationReward(uint256 _defaultReputationReward) public onlyOwner returns (bool) {
         require(_defaultReputationReward > 0, "new reputation reward must be greater than zero");
-        require(_defaultReputationReward != defaultReputationReward, "new reputation reward must be different");
-        defaultReputationReward = _defaultReputationReward;
+        require(_defaultReputationReward != atonomiStorage.getUint(keccak256("defaultReputationReward")), "new reputation reward must be different");
+
+        atonomiStorage.setUint(keccak256("defaultReputationReward"), _defaultReputationReward);
+
         emit DefaultReputationRewardUpdated(msg.sender, _defaultReputationReward);
         return true;
     }
@@ -131,8 +138,10 @@ contract NetworkSettings is Ownable {
     function setReputationIRNNodeShare(uint256 _reputationIRNNodeShare) public onlyOwner returns (bool) {
         require(_reputationIRNNodeShare > 0, "new share must be larger than zero");
         require(_reputationIRNNodeShare < 100, "new share must be less than to 100");
-        require(reputationIRNNodeShare != _reputationIRNNodeShare, "new share must be different");
-        reputationIRNNodeShare = _reputationIRNNodeShare;
+        require(atonomiStorage.getUint(keccak256("reputationIRNNodeShare")) != _reputationIRNNodeShare, "new share must be different");
+
+        atonomiStorage.setUint(keccak256("reputationIRNNodeShare"), _reputationIRNNodeShare);
+
         emit ReputationIRNNodeShareUpdated(msg.sender, _reputationIRNNodeShare);
         return true;
     }
@@ -141,8 +150,10 @@ contract NetworkSettings is Ownable {
     /// @param _newBlockThreshold new value for all token pools
     /// @return true if successful, otherwise false
     function setRewardBlockThreshold(uint _newBlockThreshold) public onlyOwner returns (bool) {
-        require(_newBlockThreshold != blockThreshold, "must be different");
-        blockThreshold = _newBlockThreshold;
+        require(_newBlockThreshold != atonomiStorage.getUint(keccak256("blockThreshold")), "must be different");
+
+        atonomiStorage.setUint(keccak256("blockThreshold"), _newBlockThreshold);
+
         emit RewardBlockThresholdChanged(msg.sender, _newBlockThreshold);
         return true;
     }

@@ -9,22 +9,34 @@ contract AtonomiEternalStorage is Ownable {
 
     /**** Storage Types *******/
 
-    mapping(bytes32 => uint256)    private uIntStorage;
-    mapping(bytes32 => string)     private stringStorage;
-    mapping(bytes32 => address)    private addressStorage;
-    mapping(bytes32 => bytes)      private bytesStorage;
-    mapping(bytes32 => bool)       private boolStorage;
-    mapping(bytes32 => int256)     private intStorage;
+    mapping(bytes32 => uint256)  private uIntStorage;
+    mapping(bytes32 => string)   private stringStorage;
+    mapping(bytes32 => address)  private addressStorage;
+    mapping(bytes32 => bytes)    private bytesStorage;
+    mapping(bytes32 => bytes32)    private bytes32Storage;
+    mapping(bytes32 => bool)     private boolStorage;
+    mapping(bytes32 => int256)   private intStorage;
 
 
     /*** Modifiers ************/
-
     
     modifier onlyAtonomiMember() {
         /// TODO: Only allow authorized network members to write
         _;
     }
 
+
+    /// @dev Only allow access from the latest version of a contract in the Rocket Pool network after deployment
+    modifier onlyLatestRocketNetworkContract() {
+        // The owner is only allowed to set the storage upon deployment to register the initial contracts, afterwards their direct access is disabled
+        if (msg.sender == owner) {
+            require(boolStorage[keccak256("contract.storage.initialised")] == false);
+        } else {
+            // Make sure the access is permitted to only contracts in our Dapp
+            require(addressStorage[keccak256("contract.address", msg.sender)] != 0x0);
+        }
+        _;
+    }
 
     /**** Get Methods ***********/
 
@@ -46,6 +58,11 @@ contract AtonomiEternalStorage is Ownable {
     /// @param _key The key for the record
     function getBytes(bytes32 _key) external view returns (bytes) {
         return bytesStorage[_key];
+    }
+
+    /// @param _key The key for the record
+    function getBytes32(bytes32 _key) external view returns (bytes32) {
+        return bytes32Storage[_key];
     }
 
     /// @param _key The key for the record
@@ -81,6 +98,11 @@ contract AtonomiEternalStorage is Ownable {
     function setBytes(bytes32 _key, bytes _value) onlyAtonomiMember external {
         bytesStorage[_key] = _value;
     }
+
+        /// @param _key The key for the record
+    function setBytes32(bytes32 _key, bytes32 _value) onlyAtonomiMember external {
+        bytes32Storage[_key] = _value;
+    }
     
     /// @param _key The key for the record
     function setBool(bytes32 _key, bool _value) onlyAtonomiMember external {
@@ -90,5 +112,42 @@ contract AtonomiEternalStorage is Ownable {
     /// @param _key The key for the record
     function setInt(bytes32 _key, int _value) onlyAtonomiMember external {
         intStorage[_key] = _value;
+    }
+
+    /**** Delete Methods ***********/
+    
+    /// @param _key The key for the record
+    function deleteAddress(bytes32 _key) onlyLatestRocketNetworkContract external {
+        delete addressStorage[_key];
+    }
+
+    /// @param _key The key for the record
+    function deleteUint(bytes32 _key) onlyLatestRocketNetworkContract external {
+        delete uIntStorage[_key];
+    }
+
+    /// @param _key The key for the record
+    function deleteString(bytes32 _key) onlyLatestRocketNetworkContract external {
+        delete stringStorage[_key];
+    }
+
+    /// @param _key The key for the record
+    function deleteBytes(bytes32 _key) onlyLatestRocketNetworkContract external {
+        delete bytesStorage[_key];
+    }
+
+    /// @param _key The key for the record
+    function deleteBytes32(bytes32 _key) onlyLatestRocketNetworkContract external {
+        delete bytes32Storage[_key];
+    }
+    
+    /// @param _key The key for the record
+    function deleteBool(bytes32 _key) onlyLatestRocketNetworkContract external {
+        delete boolStorage[_key];
+    }
+    
+    /// @param _key The key for the record
+    function deleteInt(bytes32 _key) onlyLatestRocketNetworkContract external {
+        delete intStorage[_key];
     }
 }

@@ -2,7 +2,7 @@ pragma solidity ^0.4.23; // solhint-disable-line
 
 import "zeppelin-solidity/contracts/lifecycle/Pausable.sol";
 import "zeppelin-solidity/contracts/lifecycle/TokenDestructible.sol";
-
+import "../Storage/AtonomiEternalStorage.sol";
 
 /// @title ERC-20 Token Standard
 /// @author Fabian Vogelsteller <fabian@ethereum.org>, Vitalik Buterin <vitalik.buterin@ethereum.org>
@@ -74,7 +74,7 @@ interface SettingsInterface {
 /// @dev Ownable: Owner governs the access of Atonomi Admins, Fees, and Rewards on the network
 /// @dev Pausable: Gives ability for Owner to pull emergency stop to prevent actions on the network
 /// @dev TokenDestructible: Gives owner ability to kill the contract and extract funds to a new contract
-contract AtonomiLegacy is Pausable, TokenDestructible {
+contract Atonomi is Pausable, TokenDestructible {
     using SafeMath for uint256;
 
     /// @title ATMI Token
@@ -86,53 +86,9 @@ contract AtonomiLegacy is Pausable, TokenDestructible {
     /// @notice Atonomi Owner controlled settings are governed in this contract
     SettingsInterface public settings;
 
-    ///
-    /// STORAGE MAPPINGS 
-    ///
-    /// @title Atonomi Devices registry
-    /// @notice Contains all devices participating in the Atonomi Network
-    /// @dev Key is a keccak256 hash of the device id
-    /// @dev Value is a struct that contains the device status and metadata
-    mapping (bytes32 => Device) public devices;
+    /// @title Atonomi Storage
+    AtonomiEternalStorage private atonomiStorage;
 
-    /// @title Atonomi Participant whitelist
-    /// @notice Contains all the network participants
-    /// @dev Atonomi Admins: Govern the access to manufacturers and IRN Nodes on the network
-    /// @dev IRN Nodes: Governs reputation score data of devices
-    /// @dev Manufacturers: Governs devices on the network
-    /// @dev Key is ethereum account of the participant
-    /// @dev Value is a struct that contains the role of the participant
-    mapping (address => NetworkMember) public network;
-
-    /// @title Token Pools
-    /// @notice each manufacturer will manage a pool of tokens for reputation rewards
-    /// @dev Key is ethereum account for pool owner
-    /// @dev Value is struct representing token pool attributes
-    /// @dev incoming tokens will come from registrations, activations, or public donations
-    /// @dev outgoing tokens will come from reputation rewards
-    mapping (address => TokenPool) public pools;
-
-    /// @title Reward Balances
-    /// @notice balances of rewards that are able to be claimed by participants
-    /// @dev Key is ethereum account of the owner of the tokens
-    /// @dev Value is tokens available for withdraw
-    mapping (address => uint256) public rewards;
-
-    /// @title Lookup by Manufacturer ID the wallet for reputation rewards
-    /// @dev Key is the manufacturer id
-    /// @dev Value is ethereum account to be rewarded
-    mapping (bytes32 => address) public manufacturerRewards;
-
-    /// @title Track last write by reputation author
-    /// @dev First key is the ethereum address of the reputation author
-    /// @dev Second key is the device id
-    /// @dev Value is the block number of the last time the author has submitted a score for the device
-    mapping (address => mapping (bytes32 => uint256)) public authorWrites;
-
-    /// @title Default Repuration score for manufacturers
-    /// @dev Key is the manufacturer id
-    /// @dev value is the score to use for newly registered devices
-    mapping (bytes32 => bytes32) public defaultManufacturerReputations;
 
     ///
     /// TYPES 
@@ -181,19 +137,19 @@ contract AtonomiLegacy is Pausable, TokenDestructible {
     ///
     /// @notice only manufacturers can call, otherwise throw
     modifier onlyManufacturer() {
-        require(network[msg.sender].isManufacturer, "must be a manufacturer");
+        require(atonomiStorage.getBool(keccak256("network", "msg.sender", "isManufacturer")), "must be a manufacturer");
         _;
     }
 
     /// @notice only IRNAdmins or Owner can call, otherwise throw
     modifier onlyIRNorOwner() {
-        require(msg.sender == owner || network[msg.sender].isIRNAdmin, "must be owner or an irn admin");
+        require(msg.sender == owner || atonomiStorage.getBool(keccak256("network", "msg.sender", "isIRNAdmin")), "must be owner or an irn admin");
         _;
     }
 
     /// @notice only IRN Nodes can call, otherwise throw
     modifier onlyIRNNode() {
-        require(network[msg.sender].isIRNNode, "must be an irn node");
+        require(atonomiStorage.getBool(keccak256("network", "msg.sender", "isIRNNode")), "must be an irn node");
         _;
     }
 
@@ -201,15 +157,17 @@ contract AtonomiLegacy is Pausable, TokenDestructible {
     /// @param _token is the Atonomi Token contract address (must be ERC20)
     /// @param _settings is the Atonomi Network Settings contract address
     constructor (
+        address _storage,
         address _token,
         address _settings) public {
         require(_token != address(0), "token address cannot be 0x0");
         require(_settings != address(0), "settings address cannot be 0x0");
         token = ERC20Interface(_token);
         settings = SettingsInterface(_settings);
+        atonomiStorage = AtonomiEternalStorage(_storage);
     }
 
-    ///
+///
     /// EVENTS 
     ///
     /// @notice emitted on successful device registration
@@ -325,7 +283,6 @@ contract AtonomiLegacy is Pausable, TokenDestructible {
         bytes32 indexed _manufacturerId,
         bytes32 _newDefaultScore
     );
-
     ///
     /// DEVICE ONBOARDING
     ///
@@ -348,9 +305,9 @@ contract AtonomiLegacy is Pausable, TokenDestructible {
         emit DeviceRegistered(
             msg.sender,
             registrationFee,
-            _deviceIdHash,
-            d.manufacturerId,
-            _deviceType);
+            atonomiStorage.getBytes32(keccak256("devices", _deviceIdHash)),
+            atonomiStorage.getBytes32(keccak256("devices", "manufacturerId")),
+            atonomiStorage.getBytes32(keccak256("devices", _deviceType)));
         _depositTokens(msg.sender, registrationFee);
         require(token.transferFrom(msg.sender, address(this), registrationFee), "transferFrom failed");
         return true;
@@ -367,7 +324,7 @@ contract AtonomiLegacy is Pausable, TokenDestructible {
         uint256 activationFee = settings.activationFee();
         Device memory d = _activateDevice(_deviceId);
         emit DeviceActivated(msg.sender, activationFee, _deviceId, d.manufacturerId, d.deviceType);
-        address manufacturer = manufacturerRewards[d.manufacturerId];
+        address manufacturer = atonomiStorage.getAddress(keccak256("manufacturerRewards",d.manufacturerId));
         require(manufacturer != address(this), "manufacturer is unknown");
         _depositTokens(manufacturer, activationFee);
         require(token.transferFrom(msg.sender, address(this), activationFee), "transferFrom failed");
@@ -423,7 +380,7 @@ contract AtonomiLegacy is Pausable, TokenDestructible {
     {
         Device memory d = _updateReputationScore(_deviceId, _reputationScore);
 
-        address _manufacturerWallet = manufacturerRewards[d.manufacturerId];
+        address _manufacturerWallet = atonomiStorage.getAddress(keccak256("manufacturerRewards",d.manufacturerId));
         require(_manufacturerWallet != address(0), "_manufacturerWallet cannot be 0x0");
         require(_manufacturerWallet != msg.sender, "manufacturers cannot collect the full reward");
 
@@ -440,7 +397,7 @@ contract AtonomiLegacy is Pausable, TokenDestructible {
             irnReward,
             _manufacturerWallet,
             manufacturerReward);
-        authorWrites[msg.sender][_deviceId] = block.number;
+        atonomiStorage.setUint(keccak256("authorWrites",msg.sender,_deviceId), block.number);
         return true;
     }
 
@@ -455,12 +412,12 @@ contract AtonomiLegacy is Pausable, TokenDestructible {
         bytes32 deviceId)
         public view returns (uint256 irnReward, uint256 manufacturerReward)
     {
-        uint256 lastWrite = authorWrites[author][deviceId];
+        uint256 lastWrite = atonomiStorage.getUint(keccak256("authorWrites",author,deviceId));
         uint256 blocks = 0;
         if (lastWrite > 0) {
             blocks = block.number.sub(lastWrite);
         }
-        uint256 totalRewards = calculateReward(pools[manufacturer].rewardAmount, blocks);
+        uint256 totalRewards = calculateReward(atonomiStorage.getUint(keccak256("pools",manufacturer,"rewardAmount")), blocks);
         irnReward = totalRewards.mul(settings.reputationIRNNodeShare()).div(100);
         manufacturerReward = totalRewards.sub(irnReward);
     }
@@ -542,27 +499,26 @@ contract AtonomiLegacy is Pausable, TokenDestructible {
         bytes32 _memberId)
         public onlyIRNorOwner returns(bool)
     {
-        NetworkMember storage m = network[_member];
-        require(!m.isIRNAdmin, "already an irn admin");
-        require(!m.isManufacturer, "already a manufacturer");
-        require(!m.isIRNNode, "already an irn node");
-        require(m.memberId == 0, "already assigned a member id");
+        require(!atonomiStorage.getBool(keccak256("network", _member, "isIRNAdmin")), "already an irn admin");
+        require(!atonomiStorage.getBool(keccak256("network", _member, "isManufacturer")), "already a manufacturer");
+        require(!atonomiStorage.getBool(keccak256("network", _member, "isIRNNode")), "already an irn node");
+        require(atonomiStorage.getUint(keccak256("network", _member, "memberId")) != 0, "already assigned a member id");
 
-        m.isIRNAdmin = _isIRNAdmin;
-        m.isManufacturer = _isManufacturer;
-        m.isIRNNode = _isIRNNode;
-        m.memberId = _memberId;
+        atonomiStorage.setBool(keccak256("network", _member, "isIRNAdmin"), _isIRNAdmin);
+        atonomiStorage.setBool(keccak256("network", _member, "isManufacturer"), _isManufacturer);
+        atonomiStorage.setBool(keccak256("network", _member, "isIRNNode"), _isIRNNode);
+        atonomiStorage.setBytes32(keccak256("network", _member, "memberId"), _memberId);
 
-        if (m.isManufacturer) {
+        if (_isManufacturer) {
             require(_memberId != 0, "manufacturer id is required");
 
             // keep lookup for rewards in sync
-            require(manufacturerRewards[m.memberId] == address(0), "manufacturer is already assigned");
-            manufacturerRewards[m.memberId] = _member;
+            require(atonomiStorage.getAddress(keccak256("manufacturerRewards",_memberId)) == address(0), "manufacturer is already assigned");
+            atonomiStorage.setAddress(keccak256("manufacturerRewards",_memberId), _member);
 
             // set reputation reward if token pool doesnt exist
-            if (pools[_member].rewardAmount == 0) {
-                pools[_member].rewardAmount = settings.defaultReputationReward();
+            if (atonomiStorage.getAddress(keccak256("pools", _member, "rewardAmount")) == 0) { //TODO This check may need revision
+                atonomiStorage.setUint(keccak256("pools", _member, "rewardAmount"), settings.defaultReputationReward());
             }
         }
 
@@ -576,18 +532,23 @@ contract AtonomiLegacy is Pausable, TokenDestructible {
     /// @return true if successful, otherwise false
     /// @dev msg.sender is expected to be either owner or irn admin
     function removeNetworkMember(address _member) public onlyIRNorOwner returns(bool) {
-        bytes32 memberId = network[_member].memberId;
-        if (network[_member].isManufacturer) {
+        bytes32 memberId = atonomiStorage.getBytes32(keccak256("network", _member, "memberId"));
+        bool isManufacturer = atonomiStorage.getBool(keccak256("network", _member, "isManufacturer"));
+        if (isManufacturer) {
             // remove token pool if there is a zero balance
-            if (pools[_member].balance == 0) {
-                delete pools[_member];
+            if (atonomiStorage.getAddress(keccak256("pools", _member, "balance")) == 0) {
+                atonomiStorage.deleteUint(keccak256("pools", _member, "balance"));
+                atonomiStorage.deleteUint(keccak256("pools", _member, "rewardAmount"));
             }
 
             // keep lookup with rewards in sync
-            delete manufacturerRewards[memberId];
+            atonomiStorage.deleteUint(keccak256("manufacturerRewards", memberId));
         }
 
-        delete network[_member];
+        atonomiStorage.deleteBool(keccak256("network", _member, "isIRNAdmin"));
+        atonomiStorage.deleteBool(keccak256("network", _member, "isManufacturer"));
+        atonomiStorage.deleteBool(keccak256("network", _member, "isIRNNode"));
+        atonomiStorage.deleteBytes32(keccak256("network", _member, "memberId"));
 
         emit NetworkMemberRemoved(msg.sender, _member, memberId);
         return true;
@@ -603,34 +564,48 @@ contract AtonomiLegacy is Pausable, TokenDestructible {
     function changeManufacturerWallet(address _new) public onlyManufacturer returns (bool) {
         require(_new != address(0), "new address cannot be 0x0");
 
-        NetworkMember memory old = network[msg.sender];
-        require(old.isManufacturer && old.memberId != 0, "must be a manufacturer");
+        require(atonomiStorage.getBool(keccak256("network", msg.sender, "isManufacturer")), "must be a manufacturer");
+        require(atonomiStorage.getBytes32(keccak256("network", msg.sender, "memberId")) != 0, "must be a manufacturer");
 
         // copy permissions
-        require(!network[_new].isIRNAdmin, "already an irn admin");
-        require(!network[_new].isManufacturer, "already a manufacturer");
-        require(!network[_new].isIRNNode, "already an irn node");
-        require(network[_new].memberId == 0, "memberId already exists");
-        network[_new] = NetworkMember(
-            old.isIRNAdmin,
-            old.isManufacturer,
-            old.isIRNNode,
-            old.memberId
-        );
 
+        bool oldIdIrnAdmin = atonomiStorage.getBool(keccak256("network", msg.sender, "isIRNAdmin"));
+        bool oldIsManufacturer = atonomiStorage.getBool(keccak256("network", msg.sender, "isManufacturer"));
+        bool oldIsIRNNode = atonomiStorage.getBool(keccak256("network", msg.sender, "isIRNNode"));
+        bytes32 oldMemberId = atonomiStorage.getBytes32(keccak256("network", msg.sender, "memberId"));
+
+        require(!oldIdIrnAdmin, "already an irn admin");
+        require(!oldIsManufacturer, "already a manufacturer");
+        require(!oldIsIRNNode, "already an irn node");
+        require(oldMemberId == 0, "already assigned a member id");
+
+
+        atonomiStorage.setBool(keccak256("network", _new, "isIRNAdmin"), oldIdIrnAdmin);
+        atonomiStorage.setBool(keccak256("network", _new, "isManufacturer"), oldIsManufacturer);
+        atonomiStorage.setBool(keccak256("network", _new, "isIRNNode"), oldIsIRNNode);
+        atonomiStorage.setBytes32(keccak256("network", _new, "memberId"), oldMemberId);
+
+        
         // transfer balance from old pool to the new pool
-        require(pools[_new].balance == 0 && pools[_new].rewardAmount == 0, "new token pool already exists");
-        pools[_new].balance = pools[msg.sender].balance;
-        pools[_new].rewardAmount = pools[msg.sender].rewardAmount;
-        delete pools[msg.sender];
+        require(atonomiStorage.getUint(keccak256("pools", _new, "balance")) == 0, "new token pool already exists");
+        require(atonomiStorage.getUint(keccak256("pools", _new, "rewardAmount")) == 0, "new token pool already exists");
+
+        atonomiStorage.setUint(keccak256("pools", _new, "balance"), atonomiStorage.getUint(keccak256("pools", msg.sender, "balance")));
+        atonomiStorage.setUint(keccak256("pools", _new, "rewardAmount"), atonomiStorage.getUint(keccak256("pools", msg.sender, "rewardAmount")));
+
+        atonomiStorage.deleteUint(keccak256("pools", msg.sender, "balance"));
+        atonomiStorage.deleteUint(keccak256("pools", msg.sender, "rewardAmount"));
 
         // update reward mapping
-        manufacturerRewards[old.memberId] = _new;
+        atonomiStorage.setAddress(keccak256("manufacturerRewards", msg.sender, "address"), _new);
 
         // delete old member
-        delete network[msg.sender];
+        atonomiStorage.deleteBool(keccak256("network", msg.sender, "isIRNAdmin"));
+        atonomiStorage.deleteBool(keccak256("network", msg.sender, "isManufacturer"));
+        atonomiStorage.deleteBool(keccak256("network", msg.sender, "isIRNNode"));
+        atonomiStorage.deleteBytes32(keccak256("network", msg.sender, "memberId"));
 
-        emit ManufacturerRewardWalletChanged(msg.sender, _new, old.memberId);
+        emit ManufacturerRewardWalletChanged(msg.sender, _new, oldMemberId);
         return true;
     }
 
@@ -641,10 +616,9 @@ contract AtonomiLegacy is Pausable, TokenDestructible {
     function setTokenPoolReward(uint256 newReward) public onlyManufacturer returns (bool) {
         require(newReward != 0, "newReward is required");
 
-        TokenPool storage p = pools[msg.sender];
-        require(p.rewardAmount != newReward, "newReward should be different");
+        require(atonomiStorage.getUint(keccak256("pools", msg.sender, "rewardAmount")) != newReward, "newReward should be different");
 
-        p.rewardAmount = newReward;
+        atonomiStorage.setUint(keccak256("pools", msg.sender, "rewardAmount"), newReward);
         emit TokenPoolRewardUpdated(msg.sender, newReward);
         return true;
     }
@@ -656,8 +630,8 @@ contract AtonomiLegacy is Pausable, TokenDestructible {
         require(manufacturerId != 0, "manufacturerId is required");
         require(amount > 0, "amount is required");
 
-        address manufacturer = manufacturerRewards[manufacturerId];
-        require(manufacturer != address(0));
+        address manufacturer = atonomiStorage.getAddress(keccak256("manufacturerRewards","manufacturerId"));
+        require(manufacturer != address(0), "manufacturer must have a valid address");
 
         _depositTokens(manufacturer, amount);
         emit TokensDeposited(msg.sender, manufacturerId, manufacturer, amount);
@@ -670,10 +644,10 @@ contract AtonomiLegacy is Pausable, TokenDestructible {
     /// @return true if successful, otherwise false
     /// @dev owner has ability to pause this operation
     function withdrawTokens() public whenNotPaused returns (bool) {
-        uint256 amount = rewards[msg.sender];
+        uint256 amount = atonomiStorage.getUint(keccak256("rewards", msg.sender));
         require(amount > 0, "amount is zero");
 
-        rewards[msg.sender] = 0;
+        atonomiStorage.setUint(keccak256("rewards", msg.sender), 0);
         emit TokensWithdrawn(msg.sender, amount);
 
         require(token.transfer(msg.sender, amount), "token transfer failed");
@@ -690,11 +664,12 @@ contract AtonomiLegacy is Pausable, TokenDestructible {
         bytes32 _newDefaultScore) public onlyOwner returns (bool) {
         require(_manufacturerId != 0, "_manufacturerId is required");
         require(
-            _newDefaultScore != defaultManufacturerReputations[_manufacturerId],
+            _newDefaultScore != atonomiStorage.getBytes32(keccak256("defaultManufacturerReputations", _manufacturerId)),
             "_newDefaultScore should be different"
         );
 
-        defaultManufacturerReputations[_manufacturerId] = _newDefaultScore;
+        atonomiStorage.setBytes32(keccak256("defaultManufacturerReputations", _manufacturerId), _newDefaultScore);
+
         emit DefaultReputationScoreChanged(msg.sender, _manufacturerId, _newDefaultScore);
         return true;
     }
@@ -704,14 +679,19 @@ contract AtonomiLegacy is Pausable, TokenDestructible {
     ///
     /// @dev track balances of any deposits going into a token pool
     function _depositTokens(address _owner, uint256 _amount) internal {
-        pools[_owner].balance = pools[_owner].balance.add(_amount);
+        uint256 balance = atonomiStorage.getUint(keccak256("pools", _owner, "balance"));
+        atonomiStorage.setUint(keccak256("pools", _owner, "balance"), balance.add(_amount));
     }
 
     /// @dev track balances of any rewards going out of the token pool
     function _distributeRewards(address _manufacturer, address _owner, uint256 _amount) internal {
         require(_amount > 0, "_amount is required");
-        pools[_manufacturer].balance = pools[_manufacturer].balance.sub(_amount);
-        rewards[_owner] = rewards[_owner].add(_amount);
+
+        uint256 balance = atonomiStorage.getUint(keccak256("pools", _manufacturer, "balance"));
+        atonomiStorage.setUint(keccak256("pools", _manufacturer, "balance"), balance.sub(_amount));
+
+        uint256 reward = atonomiStorage.getUint(keccak256("rewards", _owner));
+        atonomiStorage.setUint(keccak256("rewards", _owner), reward.add(_amount));
     }
 
     /// @dev ensure a device is validated for registration
@@ -726,33 +706,32 @@ contract AtonomiLegacy is Pausable, TokenDestructible {
         require(_deviceType != 0, "device type is required");
         require(_devicePublicKey != 0, "device public key is required");
 
-        Device storage d = devices[_deviceIdHash];
-        require(!d.registered, "device is already registered");
-        require(!d.activated, "device is already activated");
+        require(!atonomiStorage.getBool(keccak256("devices", _deviceIdHash, "registered")), "device is already registered");
+        require(!atonomiStorage.getBool(keccak256("devices", _deviceIdHash, "activated")), "device is already activated");
 
-        bytes32 manufacturerId = network[_manufacturer].memberId;
+        bytes32 manufacturerId = atonomiStorage.getBytes32(keccak256("network", _manufacturer, "memberId"));
         require(manufacturerId != 0, "manufacturer id is unknown");
 
-        d.manufacturerId = manufacturerId;
-        d.deviceType = _deviceType;
-        d.registered = true;
-        d.activated = false;
-        d.reputationScore = defaultManufacturerReputations[manufacturerId];
-        d.devicePublicKey = _devicePublicKey;
-        return d;
+        atonomiStorage.setBytes32(keccak256("devices", _deviceIdHash, "manufacturerId"), manufacturerId);
+        atonomiStorage.setBytes32(keccak256("devices", _deviceIdHash, "deviceType"), _deviceType);
+        atonomiStorage.setBool(keccak256("devices", _deviceIdHash, "registered"), true);
+        atonomiStorage.setBool(keccak256("devices", _deviceIdHash, "activated"), false);
+
+        bytes32 newScore = atonomiStorage.getBytes32(keccak256("defaultManufacturerReputations", "manufacturerId"));
+        atonomiStorage.setBytes32(keccak256("devices", _deviceIdHash, "reputationScore"), newScore);
+        atonomiStorage.setBytes32(keccak256("devices", _deviceIdHash, "devicePublicKey"), _devicePublicKey);
     }
 
     /// @dev ensure a device is validated for activation
     /// @dev updates device registry
     function _activateDevice(bytes32 _deviceId) internal returns (Device) {
         bytes32 deviceIdHash = keccak256(_deviceId);
-        Device storage d = devices[deviceIdHash];
-        require(d.registered, "not registered");
-        require(!d.activated, "already activated");
-        require(d.manufacturerId != 0, "no manufacturer id was found");
+        
+        require(atonomiStorage.getBool(keccak256("devices", _deviceId, "registered")), "not registered");
+        require(!atonomiStorage.getBool(keccak256("devices", _deviceId, "activated")), "already activated");
+        require(atonomiStorage.getUint(keccak256("devices", _deviceId, "manufacturerId")) != 0, "no manufacturer id was found");
 
-        d.activated = true;
-        return d;
+        atonomiStorage.setBool(keccak256("devices", _deviceId, "activated"), true);
     }
 
     /// @dev ensure a device is validated for a new reputation score
@@ -760,12 +739,10 @@ contract AtonomiLegacy is Pausable, TokenDestructible {
     function _updateReputationScore(bytes32 _deviceId, bytes32 _reputationScore) internal returns (Device) {
         require(_deviceId != 0, "device id is empty");
 
-        Device storage d = devices[keccak256(_deviceId)];
-        require(d.registered, "not registered");
-        require(d.activated, "not activated");
-        require(d.reputationScore != _reputationScore, "new score needs to be different");
+        require(atonomiStorage.getBool(keccak256("devices", _deviceId, "registered")), "not registered");
+        require(atonomiStorage.getBool(keccak256("devices", _deviceId, "activated")), "not activated");
+        require(atonomiStorage.getBytes32(keccak256("devices", _deviceId, "reputationScore")) != _reputationScore, "new score needs to be different");
 
-        d.reputationScore = _reputationScore;
-        return d;
+        atonomiStorage.setBytes32(keccak256("devices", _deviceId, "reputationScore"), _reputationScore);
     }
 }
