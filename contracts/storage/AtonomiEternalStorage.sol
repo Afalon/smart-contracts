@@ -17,11 +17,15 @@ contract AtonomiEternalStorage is Ownable {
     mapping(bytes32 => bool)     private boolStorage;
     mapping(bytes32 => int256)   private intStorage;
 
-
+    
     /*** Modifiers ************/
 
     /// @notice only IRNNodes can call, otherwise throw
     modifier onlyAtonomiMember() {
+
+        // Make sure the access is permitted to only contracts in our Dapp
+        require(addressStorage[keccak256("contract.address", msg.sender)] != 0x0);
+
         require(this.getBool(keccak256("network", msg.sender, "isIRNNode")), "not a network member");
         _;
     }
