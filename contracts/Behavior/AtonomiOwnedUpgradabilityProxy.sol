@@ -21,7 +21,7 @@ contract AtonomiOwnedUpgradabilityProxy is AtonomiUpgradabilityProxy, AtonomiEte
     /**
     * @dev the constructor sets the original owner of the contract to the sender account.
     */
-    function OwnedUpgradeabilityProxy() public {
+    constructor() {
         setUpgradeabilityOwner(msg.sender);
     }
     
