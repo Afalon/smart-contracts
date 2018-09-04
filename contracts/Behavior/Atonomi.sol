@@ -3,7 +3,6 @@ pragma solidity ^0.4.23; // solhint-disable-line
 import "zeppelin-solidity/contracts/lifecycle/Pausable.sol";
 import "zeppelin-solidity/contracts/lifecycle/TokenDestructible.sol";
 import "../Storage/AtonomiEternalStorage.sol";
-import "github.com/Arachnid/solidity-stringutils/strings.sol";
 
 /// @title ERC-20 Token Standard
 /// @author Fabian Vogelsteller <fabian@ethereum.org>, Vitalik Buterin <vitalik.buterin@ethereum.org>
@@ -78,8 +77,6 @@ interface SettingsInterface {
 contract Atonomi is Pausable, TokenDestructible {
     
     using SafeMath for uint256;
-
-    using strings for *;
 
     /// @title ATMI Token
     /// @notice Standard ERC20 Token

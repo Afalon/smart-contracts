@@ -11,7 +11,8 @@ contract Registry {
 
     /**
     * @dev This event will be emitted every time a new contract is added to the registry
-    * @param proxy representing the address of the proxy created
+    * @param version representing the new version of the added contract
+
     */
     event VersionAdded(string version, address implementation);
 
