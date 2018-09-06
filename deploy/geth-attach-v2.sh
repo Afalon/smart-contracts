@@ -15,5 +15,7 @@ echo -e "var ETHER_ADDR='$ETHER_ADDR'" >> scripts/atonomi-consts.js
 
 echo -e "" > scripts/atonomi-abis.js
 echo -e "var AtonomiOwnedUpgradabilityProxyJSON = " >> scripts/atonomi-abis.js | cat "../build/contracts/AtonomiOwnedUpgradabilityProxy.json" >> scripts/atonomi-abis.js
+echo -e "\nvar AtonomiJSON = " >> scripts/atonomi-abis.js | cat "../build/contracts/Atonomi.json" >> scripts/atonomi-abis.js
+echo -e "\nvar TestContractJSON = " >> scripts/atonomi-abis.js | cat "../build/contracts/TestContract.json" >> scripts/atonomi-abis.js
 
 geth --preload "scripts/atonomi-consts.js,scripts/deploy-helpers.js,scripts/atonomi-abis.js,scripts/deploy-atonomi-v2.js" attach $PARITY_NODE
