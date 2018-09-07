@@ -17,7 +17,7 @@ contract Registry {
     event VersionAdded(string version, address implementation);
 
 
-    /**
+    /** 
     * @dev Registers a new version with its implementation address
     * @param version representing the version name of the new implementation to be registered
     * @param implementation representing the address of the new implementation to be registered
