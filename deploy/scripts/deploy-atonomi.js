@@ -18,7 +18,8 @@ var chains = {
   kovan: {
     token: '0xe66254d9560c2d030ca5c3439c5d6b58061dd6f7',
     atonomi: '0xbde8f51601e552d620c208049c5970f7b52cd044',
-    settings: '0x729a741ce0c776130c50d35906f0dbd248184982'
+    settings: '0x729a741ce0c776130c50d35906f0dbd248184982',
+    storage: '0x793a537c05bf9085f4907cb4d55c2bc47af76e10'
   },
   ganache: {
     token: AtonomiTokenJSON.networks[5777] ? AtonomiTokenJSON.networks[5777].address : undefined,
@@ -60,13 +61,14 @@ function initATMIToken(safeMathAddress, estimateOnly) {
   return hash
 }
 
-function initNetworkSettings(estimateOnly, gasPriceGwei) {
+function initNetworkSettings(storageAddress, estimateOnly, gasPriceGwei) {
   console.log('Configuring Networking Settings...')
 
   var gasPriceWei = web3.toWei(gasPriceGwei, 'gwei')
   console.log('gas price', gasPriceWei)
 
   var constructorByteCode = web3.eth.contract(NetworkSettingsJSON.abi).new.getData(
+    storageAddress,
     regFee,
     actFee,
     repReward,
@@ -83,19 +85,37 @@ function initNetworkSettings(estimateOnly, gasPriceGwei) {
   return hash
 }
 
-function initAtonomi(ercAddress, settingsAddress, estimateOnly, gasPriceGwei) {
+function initStorageContract(estimateOnly, gasPriceGwei) {
+  console.log('Configuring Storage Contract...')
+
+  var gasPriceWei = web3.toWei(gasPriceGwei, 'gwei')
+  console.log('gas price', gasPriceWei)
+
+  var constructorByteCode = web3.eth.contract(AtonomiEternalStorageJSON.abi).new.getData(
+    {data: AtonomiEternalStorageJSON.bytecode})
+  var gas = web3.eth.estimateGas({from: ETHER_ADDR, data: constructorByteCode})
+  console.log('gas estimate', gas)
+
+  if(estimateOnly) return undefined
+
+  var hash = web3.eth.sendTransaction({from: ETHER_ADDR, data: constructorByteCode, gas: gas, gasPrice: gasPriceWei})
+  console.log('txn hash', hash)
+  return hash
+}
+
+//var kovan = chains['kovan']; initAtonomi(kovan.token, kovan.settings, kovan.storage, true, 10)
+function initAtonomi(ercAddress, settingsAddress, storageAddress, estimateOnly, gasPriceGwei) {
   console.log('Configuring Atonomi...')
 
   var gasPriceWei = web3.toWei(gasPriceGwei, 'gwei')
   console.log('gas price', gasPriceWei)
 
   var constructorByteCode = web3.eth.contract(AtonomiJSON.abi).new.getData(
+    storageAddress,
     ercAddress,
     settingsAddress,
     {data: AtonomiJSON.bytecode})
 
-  // TODO: kovan issue with estimate gas for larger contracts
-  // var gas = 6500000
   var gas = web3.eth.estimateGas({from: ETHER_ADDR, data: constructorByteCode})
   console.log('gas estimate', gas)
 

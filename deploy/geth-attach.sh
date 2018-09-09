@@ -29,6 +29,7 @@ echo -e "" > scripts/atonomi-abis.js
 echo -e "var SafeMathLibJSON = " >> scripts/atonomi-abis.js | cat "../build/contracts/SafeMathLib.json" >> scripts/atonomi-abis.js
 echo -e "\nvar AtonomiTokenJSON = " >> scripts/atonomi-abis.js | cat "../build/contracts/AMLToken.json" >> scripts/atonomi-abis.js
 echo -e "\nvar NetworkSettingsJSON = " >> scripts/atonomi-abis.js | cat "../build/contracts/NetworkSettings.json" >> scripts/atonomi-abis.js
+echo -e "\nvar AtonomiEternalStorageJSON = " >> scripts/atonomi-abis.js | cat "../build/contracts/AtonomiEternalStorage.json" >> scripts/atonomi-abis.js
 echo -e "\nvar AtonomiJSON = " >> scripts/atonomi-abis.js | cat "../build/contracts/Atonomi.json" >> scripts/atonomi-abis.js
 
 geth --preload "scripts/atonomi-consts.js,scripts/deploy-helpers.js,scripts/atonomi-abis.js,scripts/deploy-atonomi.js" attach $PARITY_NODE
