@@ -5,7 +5,7 @@ import "../Storage/AtonomiEternalStorage.sol";
 
 /// @title Atonomi Network Settings
 /// @notice This contract controls all owner configurable variables in the network
-contract NetworkSettings is Ownable {
+contract Settings is Ownable {
 
     /// @notice emitted everytime the registration fee changes
     /// @param _sender ethereum account of participant that made the change
