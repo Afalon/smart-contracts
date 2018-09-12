@@ -44,8 +44,9 @@
   },
   "scripts": {
     "compile": "truffle compile --all",
-    "ganache-cli": "ganache-cli -p 8546 -e 1000 -a 15 -l 990000000000000",
+    "ganache-cli": "ganache-cli -p 8546 -e 2000000 -a 15 -l 990000000000000",
     "deploy": "truffle migrate --reset",
+    "deploy:dev": "truffle migrate --reset --network development",
     "deploy:web": "truffle migrate --reset --network web && cp -rf ./build/. ../admin-portal/build/",
     "deploy:reputation": "truffle migrate --reset --network reputation && cp -f ./build/contracts/Atonomi.json ../reputation-server-api/AtonomiGanache.json",
     "copy-contracts": "rm -rf ./released-abi/contracts && cp -rf ./build/. ./released-abi/",
