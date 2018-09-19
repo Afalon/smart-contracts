@@ -1,7 +1,7 @@
 const AtonomiToken = artifacts.require('AMLToken')
 const SafeMathLib = artifacts.require('SafeMathLib')
 const AtonomiEternalStorage = artifacts.require('AtonomiEternalStorage')
-const Atonomi = artifacts.require('Atonomi')
+const Atonomi = artifacts.require('DeviceManager')
 const Settings = artifacts.require('Settings')
 const init = require('../test/helpers/init')
 
