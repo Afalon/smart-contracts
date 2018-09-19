@@ -2,6 +2,7 @@ const AtonomiToken = artifacts.require('AMLToken')
 const SafeMathLib = artifacts.require('SafeMathLib')
 const AtonomiEternalStorage = artifacts.require('AtonomiEternalStorage')
 const Atonomi = artifacts.require('DeviceManager')
+const Member = artifacts.require('NetworkMemberManager')
 const Settings = artifacts.require('Settings')
 const init = require('../test/helpers/init')
 
@@ -37,6 +38,13 @@ module.exports = function (deployer, network, accounts) {
     .then(() => deployer.deploy(Settings,
       AtonomiEternalStorage.address,
       regFee, actFee, repReward, reputationShare, blockThreshold,
+      {from: owner}))
+
+    //
+    // Member Contract
+    //
+    .then(() => deployer.deploy(Member,
+      AtonomiEternalStorage.address,
       {from: owner}))
 
     //
