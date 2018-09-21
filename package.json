@@ -36,7 +36,7 @@
     "solhint": "git+https://github.com/protofire/solhint.git",
     "solidity-coverage": "^0.5.4",
     "standard": "^10.0.3",
-    "truffle": "^4.1.11",
+    "truffle": "^4.1.14",
     "truffle-contract": "^3.0.5",
     "truffle-ext": "0.1.8",
     "truffle-flattener": "^1.2.5",
