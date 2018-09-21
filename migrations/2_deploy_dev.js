@@ -3,7 +3,7 @@ const SafeMathLib = artifacts.require('SafeMathLib')
 const AtonomiEternalStorage = artifacts.require('AtonomiEternalStorage')
 const DeviceManager = artifacts.require('DeviceManager')
 const NetworkMemberManager = artifacts.require('NetworkMemberManager')
-const Settings = artifacts.require('Settings')
+const SettingsManager = artifacts.require('SettingsManager')
 const init = require('../test/helpers/init')
 
 module.exports = function (deployer, network, accounts) {
@@ -33,9 +33,9 @@ module.exports = function (deployer, network, accounts) {
     .then(() => deployer.deploy(AtonomiEternalStorage, {from: owner}))
 
     //
-    // Network Settings Contract
+    // SettingsManager Contract
     //
-    .then(() => deployer.deploy(Settings,
+    .then(() => deployer.deploy(SettingsManager,
       AtonomiEternalStorage.address,
       regFee, actFee, repReward, reputationShare, blockThreshold,
       {from: owner}))
@@ -53,6 +53,6 @@ module.exports = function (deployer, network, accounts) {
     .then(() => deployer.deploy(DeviceManager,
       AtonomiEternalStorage.address,
       AtonomiToken.address,
-      Settings.address,
+      SettingsManager.address,
       {from: owner}))
 }

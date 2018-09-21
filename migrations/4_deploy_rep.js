@@ -1,7 +1,7 @@
 const AtonomiToken = artifacts.require('AMLToken')
 const SafeMathLib = artifacts.require('SafeMathLib')
-const Atonomi = artifacts.require('Atonomi')
-const NetworkSettings = artifacts.require('NetworkSettings')
+const DeviceManager = artifacts.require('DeviceManager')
+const NetworkMemberManager = artifacts.require('NetworkMemberManager')
 const init = require('../test/helpers/init')
 const web3Utils = require('web3-utils')
 const fs = require('fs')
@@ -29,19 +29,19 @@ module.exports = function (deployer, network, accounts) {
   deployer.deploy(SafeMathLib)
   deployer.link(SafeMathLib, AtonomiToken)
   deployer.deploy(AtonomiToken, 'Atonomi Token', 'ATMI', 1000000000000000000000000000, tokenDecimals, false, {from: owner})
-    .then(() => deployer.deploy(NetworkSettings,
+    .then(() => deployer.deploy(NetworkMemberManager,
       regFee, actFee,
       repReward,
       reputationShare,
       blockThreshold,
       {from: owner}))
 
-    .then(() => deployer.deploy(Atonomi,
+    .then(() => deployer.deploy(DeviceManager,
       AtonomiToken.address,
-      NetworkSettings.address,
+      NetworkMemberManager.address,
       {from: owner}))
 
-    .then(() => Atonomi.deployed())
+    .then(() => DeviceManager.deployed())
     .then(instance => { a = instance })
     .then(() => AtonomiToken.deployed())
     .then(instance => { t = instance })
