@@ -1,8 +1,9 @@
 pragma solidity ^0.4.23; // solhint-disable-line
 
+import "zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "../Storage/AtonomiEternalStorage.sol";
 
-contract NetworkMemberManager {
+contract NetworkMemberManager is Ownable{
 
     ///NETWORK MEMBER ADMINISTRATION EVENTS///
 
@@ -49,6 +50,9 @@ contract NetworkMemberManager {
     AtonomiEternalStorage private atonomiStorage;
 
 
+    /// @title contract has been initialized
+    bool public initialized;
+
     ///MODIFIERS///
     /// @notice only IRNAdmins or Owner can call, otherwise throw
     modifier onlyIRN() {
@@ -62,8 +66,27 @@ contract NetworkMemberManager {
         _;
     }
 
-    constructor (address _storage) {
+
+    /// @notice Initialize the Network Member Manager Contract
+    /// @param _storage is the Eternal Storage contract address
+    constructor (
+        address _storage)
+    public {
+        init(_storage);
+    }
+
+    /// @notice init contains all logic for the constructor. 
+    /// @notice the proxy contract needs this in order to reinitialize the logic contained in the delegate constructor
+    /// @notice init will only ever be able to be called once
+    /// @param _storage is the Eternal Storage contract address
+    function init(
+        address _storage)
+    public onlyOwner {
+        require(!initialized, "contract is already initialized");
+        require(_storage != address(0), "storage address cannot be 0x0");
+
         atonomiStorage = AtonomiEternalStorage(_storage);
+        initialized = true;
     }
     
     ///

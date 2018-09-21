@@ -5,7 +5,7 @@ import "../Storage/AtonomiEternalStorage.sol";
 
 /// @title Atonomi Network Settings
 /// @notice This contract controls all owner configurable variables in the network
-contract Settings is Ownable {
+contract SettingsManager is Ownable {
 
     /// @notice emitted everytime the registration fee changes
     /// @param _sender ethereum account of participant that made the change
@@ -50,7 +50,11 @@ contract Settings is Ownable {
     /// @title Atonomi Storage
     AtonomiEternalStorage private atonomiStorage;
 
-    /// @notice Constructor for Atonomi Reputation contract
+
+    /// @title contract has been initialized
+    bool public initialized;
+
+    /// @notice Initialize the Settings Manager Contract
     /// @param _registrationFee initial registration fee on the network
     /// @param _activationFee initial activation fee on the network
     /// @param _defaultReputationReward initial reputation reward on the network
@@ -62,7 +66,32 @@ contract Settings is Ownable {
         uint256 _activationFee,
         uint256 _defaultReputationReward,
         uint256 _reputationIRNNodeShare,
-        uint256 _blockThreshold) public {
+        uint256 _blockThreshold) 
+    public {
+        init(_storage, _registrationFee, _activationFee, _defaultReputationReward, _reputationIRNNodeShare, _blockThreshold);
+    }
+
+    /// @notice init contains all logic for the constructor. 
+    /// @notice the proxy contract needs this in order to reinitialize the logic contained in the delegate constructor
+    /// @notice init will only ever be able to be called once
+    /// @param _storage is the Eternal Storage contract address
+    /// @param _registrationFee initial registration fee on the network
+    /// @param _activationFee initial activation fee on the network
+    /// @param _defaultReputationReward initial reputation reward on the network
+    /// @param _reputationIRNNodeShare share that the reputation author recieves (remaining goes to manufacturer)
+    /// @param _blockThreshold the number of blocks that need to pass to receive the full reward
+    function init ( 
+        address _storage,
+        uint256 _registrationFee,
+        uint256 _activationFee,
+        uint256 _defaultReputationReward,
+        uint256 _reputationIRNNodeShare,
+        uint256 _blockThreshold
+    ) public onlyOwner {
+
+        require(!initialized, "contract is already initialized");
+        require(_storage != address(0), "storage address cannot be 0x0");
+
         require(_activationFee > 0, "activation fee must be greater than 0");
         require(_registrationFee > 0, "registration fee must be greater than 0");
         require(_defaultReputationReward > 0, "default reputation reward must be greater than 0");
@@ -91,6 +120,8 @@ contract Settings is Ownable {
         // Block threshold
         // The number of blocks that need to pass between reputation updates to gain the full reward
         atonomiStorage.setUint(keccak256("blockThreshold"), _blockThreshold);
+
+        initialized = true;
     }
 
     /// @notice sets the global registration fee

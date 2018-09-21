@@ -6,9 +6,9 @@ import "../Proxy/OwnedUpgradabilityProxy.sol";
  * @title OwnedUpgradeabilityProxy
  * @dev This contract combines an upgradeability proxy with basic authorization control functionalities
  */
-contract SettingsOwnedUpgradabilityProxy is OwnedUpgradabilityProxy {
+contract NetworkOwnedUpgradabilityProxy is OwnedUpgradabilityProxy {
   
     constructor () {
-        setPosition(keccak256("atonomi.io.manager.settings"));
+        setPosition(keccak256("atonomi.io.manager.network"));
     }
 }
